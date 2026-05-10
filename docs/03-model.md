@@ -5,7 +5,7 @@ return value becomes "person inside ROI?".
 
 ## Loading
 
-In [detect.py](../detect.py) → `main`:
+In [detect.py](../src/detect.py) → `main`:
 
 ```python
 model = YOLO("yolov8n.pt")
@@ -52,7 +52,7 @@ xyxy = [120, 200, 260, 480]    # top-left → bottom-right of the box
 
 ## How we turn output into "alert?"
 
-Per detection, inside [detect.py](../detect.py) → `main`:
+Per detection, inside [detect.py](../src/detect.py) → `main`:
 
 ```
 1. cls != PERSON_CLASS_ID  OR  conf < args.conf      →  skip this box
@@ -63,7 +63,7 @@ Per detection, inside [detect.py](../detect.py) → `main`:
 4. if inside: person_in_roi = True
 ```
 
-The two check functions live in [checks.py](../checks.py). After the
+The two check functions live in [checks.py](../src/checks.py). After the
 per-box loop finishes, `person_in_roi` is a single boolean for the whole
 frame. That boolean (plus the cooldown timer) is what gates the alert
 print.

@@ -1,7 +1,7 @@
 # Capture
 
 How frames flow in from the outside world. All of this lives in
-[detect.py](../detect.py) → `main` — capture is simple enough that it
+[detect.py](../src/detect.py) → `main` — capture is simple enough that it
 didn't justify its own module.
 
 ## The one line that does it all

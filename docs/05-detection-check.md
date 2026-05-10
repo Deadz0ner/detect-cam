@@ -2,7 +2,7 @@
 
 Given a person bbox from YOLO, how do we decide if that person is "inside the
 ROI"? Two modes, selected by the `--check` CLI flag. All the code for this
-lives in [checks.py](../checks.py).
+lives in [checks.py](../src/checks.py).
 
 ## Mode 1 — `feet` (default)
 
@@ -10,7 +10,7 @@ A single representative point is tested against the polygon.
 
 ### Step 1 — Pick the point
 
-[checks.py](../checks.py) → `feet_point`
+[checks.py](../src/checks.py) → `feet_point`
 
 ```python
 def feet_point(x1, y1, x2, y2):
@@ -34,7 +34,7 @@ Deeper reasoning for why feet rather than centroid or head:
 
 ### Step 2 — Polygon test
 
-[checks.py](../checks.py) → `is_inside_roi`
+[checks.py](../src/checks.py) → `is_inside_roi`
 
 ```python
 def is_inside_roi(point, roi):
@@ -65,7 +65,7 @@ collision-detection system works.
 
 ### Step 1 — AABB fast reject
 
-[checks.py](../checks.py) → `aabb_overlap`
+[checks.py](../src/checks.py) → `aabb_overlap`
 
 ```python
 def aabb_overlap(x1, y1, x2, y2, rx1, ry1, rx2, ry2):
@@ -76,7 +76,7 @@ The textbook axis-aligned rectangle overlap test: two rectangles overlap
 unless one is completely on one side of the other. Four comparisons, O(1).
 
 We compare the **bbox** to the **polygon's bounding rectangle** (computed
-once at startup by `build_roi_aabb()` in [roi.py](../roi.py)). If the
+once at startup by `build_roi_aabb()` in [roi.py](../src/roi.py)). If the
 rectangles don't overlap, the bbox can't possibly touch the polygon inside
 the bounding rectangle either — return False immediately.
 
@@ -85,19 +85,61 @@ Full explanation of why this works for any polygon, and what "maybe" means:
 
 ### Step 2 — Mask check (only if step 1 said "maybe")
 
-[checks.py](../checks.py) → `bbox_overlaps_roi`
+[checks.py](../src/checks.py) → `bbox_overlaps_roi`
+
+#### What the "mask" is
+
+Step 1 is loose — the polygon's bounding rectangle includes empty space
+around the polygon's curves and corners, so two rectangles can overlap
+without the bbox actually touching the polygon. To get the exact answer
+we use a **pre-painted answer key** built once at startup
+(`build_roi_mask()` in [roi.py](../src/roi.py)):
+
+- Start with a black image the same size as the frame.
+- "Paint" the inside of the polygon white. Pixels inside the polygon
+  become `1`; pixels outside stay `0`.
+
+```
+Polygon:                   Mask:
+┌────────────┐             ┌────────────┐
+│   ╱╲       │             │ . . . . . .│
+│  ╱  ╲      │             │ . . 1 . . .│   ← 1 = inside polygon
+│ ╱ ROI╲     │             │ . 1 1 1 . .│
+│╱      ╲    │             │ 1 1 1 1 1 .│   ← 0 = outside polygon
+└────────────┘             └────────────┘
+```
+
+That image (a NumPy array of `uint8`) is the mask. It's effectively a
+lookup table: *"is pixel P inside the polygon?"* becomes *"is
+`mask[P] == 1`?"*.
+
+#### How the check works
+
+For each detection whose bbox survived step 1, we take just the rectangle
+of the mask underneath the bbox:
 
 ```python
 return bool(roi_mask[by1:by2, bx1:bx2].any())
 ```
 
-The polygon is rasterised once at startup into a binary mask
-(`build_roi_mask()` in [roi.py](../roi.py)). When step 1 can't rule out
-overlap, we slice the mask under the bbox and ask "is any pixel set?".
+- `roi_mask[by1:by2, bx1:bx2]` slices out the bbox-shaped region of the
+  mask (NumPy does this in O(1) — it's a view, no copying).
+- `.any()` returns `True` if **at least one** pixel in that slice is
+  non-zero — i.e. at least one pixel under the bbox is inside the polygon.
+
+That single boolean is the answer for this detection. No polygon math at
+runtime — the polygon was rasterised once at startup; checking overlap
+becomes "is any painted pixel under this rectangle?".
+
+#### Rectangular-ROI shortcut
 
 For **rectangular ROIs** (the default) this step is skipped entirely —
 the polygon equals its bounding rectangle, so step 1's answer is already
-exact. We pass `roi_mask=None` to signal this.
+exact and no mask is built. We pass `roi_mask=None` to signal this, and
+`bbox_overlaps_roi` returns immediately after step 1.
+
+Deeper walkthrough of the whole two-step flow with diagrams:
+[10-aabb-fastreject.md](10-aabb-fastreject.md).
 
 ### When `bbox` works well
 
@@ -133,8 +175,8 @@ mode is active.
 ## How to switch
 
 ```bash
-python detect.py --source clip.mp4                 # feet (default)
-python detect.py --source clip.mp4 --check bbox    # any bbox overlap
+python src/detect.py --source clip.mp4                 # feet (default)
+python src/detect.py --source clip.mp4 --check bbox    # any bbox overlap
 ```
 
 The active mode is shown in the top-left of the live window

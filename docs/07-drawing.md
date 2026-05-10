@@ -3,13 +3,13 @@
 Everything drawn on the frame is OpenCV painting on top of a NumPy array
 in place. There's no separate canvas — the same `frame` we hand to YOLO is
 the one we draw on, then either show or save. All drawing helpers live in
-[drawing.py](../drawing.py).
+[drawing.py](../src/drawing.py).
 
 ## The four overlays
 
 ### 1. Bounding box + 2. Feet dot + 3. Label
 
-All three are produced by `draw_detection` ([drawing.py](../drawing.py)),
+All three are produced by `draw_detection` ([drawing.py](../src/drawing.py)),
 called once per person per frame:
 
 ```python
@@ -28,7 +28,7 @@ cv2.putText(frame, label, (x1, max(y1 - 8, 12)),
 
 ### 4. ROI polygon outline
 
-`draw_roi` ([drawing.py](../drawing.py)):
+`draw_roi` ([drawing.py](../src/drawing.py)):
 
 ```python
 cv2.polylines(frame, [roi], isClosed=True, color=ROI_COLOR, thickness=2)
@@ -39,7 +39,7 @@ the last vertex to the first, so the polygon visually closes.
 
 ### 5. FPS / frame / mode counter (top-left)
 
-`draw_overlay` ([drawing.py](../drawing.py)):
+`draw_overlay` ([drawing.py](../src/drawing.py)):
 
 ```python
 cv2.putText(frame, f"FPS: {fps:.1f}  frame: {frame_idx}  check: {check_mode}", ...)
@@ -50,7 +50,7 @@ log lines, and confirming at a glance which `--check` mode is active.
 
 ## Colour conventions
 
-Defined as constants in [config.py](../config.py):
+Defined as constants in [config.py](../src/config.py):
 
 | Colour | BGR | Used for |
 |---|---|---|

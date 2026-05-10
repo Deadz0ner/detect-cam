@@ -2,7 +2,7 @@
 
 The "do not enter" zone. Stored as a NumPy array of `(x, y)` integer pixel
 coordinates — the vertices of a closed polygon. All construction lives in
-[roi.py](../roi.py).
+[roi.py](../src/roi.py).
 
 ```python
 roi = np.array([[400, 300], [700, 300], [700, 600], [400, 600]], dtype=np.int32)
@@ -13,7 +13,7 @@ There are two ways to build this array.
 
 ## Default ROI
 
-[roi.py](../roi.py) → `build_default_roi`
+[roi.py](../src/roi.py) → `build_default_roi`
 
 A polygon defined as **fractions of the frame**, then multiplied by the
 frame's width and height. Fractions instead of fixed pixels means the
@@ -36,7 +36,7 @@ rectangle — which the rest of the pipeline can take advantage of (see
 
 ## Interactive ROI
 
-[roi.py](../roi.py) → `pick_roi_interactively`
+[roi.py](../src/roi.py) → `pick_roi_interactively`
 
 When `--pick-roi` is passed, the first frame is shown frozen in a window.
 The user clicks polygon vertices; OpenCV's mouse callback appends each
@@ -55,11 +55,11 @@ Controls:
 
 ## Precomputed helpers
 
-Two helpers are also in [roi.py](../roi.py), built once at startup:
+Two helpers are also in [roi.py](../src/roi.py), built once at startup:
 
 - `build_roi_aabb(roi)` — the smallest axis-aligned rectangle that
   contains the polygon. Used as a cheap overlap filter in
-  [checks.py](../checks.py). Always built.
+  [checks.py](../src/checks.py). Always built.
 - `build_roi_mask(roi, frame_shape)` — a binary image where pixels
   inside the polygon are `1` and everything else is `0`. Used by the
   precise overlap check. Only built when the ROI is **not** an
@@ -72,7 +72,7 @@ Two helpers are also in [roi.py](../roi.py), built once at startup:
 same as a rectangle but generalises to non-rectangular zones (a doorway,
 an L-shaped corridor, a triangular alcove). Rectangles are a special case
 that we exploit via the rectangular-ROI shortcut in
-[checks.py](../checks.py).
+[checks.py](../src/checks.py).
 
 ## Lifetime
 

@@ -16,13 +16,13 @@ Each module is small and self-contained; `detect.py` is just the glue.
 
 ## Setup (runs once)
 
-1. Parse CLI args ([detect.py](../detect.py) → `parse_args`)
+1. Parse CLI args ([detect.py](../src/detect.py) → `parse_args`)
 2. Load YOLO weights — first run downloads them
 3. Open the video source — webcam, file, or RTSP URL
 4. Read the **first frame** so the ROI picker has something to display
 5. Build the ROI:
-   - Default → axis-aligned rectangle (`build_default_roi` in [roi.py](../roi.py))
-   - `--pick-roi` → interactive polygon picker (`pick_roi_interactively` in [roi.py](../roi.py))
+   - Default → axis-aligned rectangle (`build_default_roi` in [roi.py](../src/roi.py))
+   - `--pick-roi` → interactive polygon picker (`pick_roi_interactively` in [roi.py](../src/roi.py))
 6. Precompute helpers for the ROI:
    - `build_roi_aabb` → polygon's bounding rectangle (always)
    - `build_roi_mask` → binary pixel mask (only for non-rectangular polygons)
@@ -36,10 +36,10 @@ For every frame, in order:
    ([03-model.md](03-model.md))
 2. **Filter** — keep only `person` boxes above the confidence threshold
 3. **Check** — is the person inside the ROI?
-   - `feet` mode → `feet_point` + `is_inside_roi` ([checks.py](../checks.py))
-   - `bbox` mode → `bbox_overlaps_roi` (AABB fast-reject + mask) ([checks.py](../checks.py))
+   - `feet` mode → `feet_point` + `is_inside_roi` ([checks.py](../src/checks.py))
+   - `bbox` mode → `bbox_overlaps_roi` (AABB fast-reject + mask) ([checks.py](../src/checks.py))
 4. **Draw** — `draw_detection` per person, then `draw_roi`
-   ([drawing.py](../drawing.py))
+   ([drawing.py](../src/drawing.py))
 5. **Alert** — if anyone is inside the ROI and the 2-second cooldown has
    elapsed, print one line to stdout ([06-alerting.md](06-alerting.md))
 6. **Overlay** — `draw_overlay` for the top-left FPS / frame / mode line

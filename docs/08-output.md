@@ -2,7 +2,7 @@
 
 Two output channels for the annotated frame: a live window, and an MP4 on
 disk. They're independent — you can do either, both, or neither. Both live
-in [detect.py](../detect.py) → `main`.
+in [detect.py](../src/detect.py) → `main`.
 
 ## Live window
 
@@ -64,5 +64,5 @@ The third output, kind of. Alert lines go to stdout — see
 [06-alerting.md](06-alerting.md). Pipe them to a file if you want a record:
 
 ```bash
-python detect.py --source clip.mp4 --pick-roi --save out.mp4 | tee alerts.log
+python src/detect.py --source clip.mp4 --pick-roi --save out.mp4 | tee alerts.log
 ```

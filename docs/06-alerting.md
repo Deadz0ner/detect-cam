@@ -1,7 +1,7 @@
 # Alerting
 
 Print `ALERT: Person in restricted area` when someone is in the ROI —
-without spamming the terminal. Lives inline in [detect.py](../detect.py)
+without spamming the terminal. Lives inline in [detect.py](../src/detect.py)
 → `main` because it's just a few lines.
 
 ## The rule
@@ -17,7 +17,7 @@ Two conditions both need to hold:
 1. **Someone is currently in the ROI** (this frame).
 2. **At least 2 seconds have passed** since the last alert printed.
 
-`ALERT_COOLDOWN_SEC = 2.0` is defined in [config.py](../config.py).
+`ALERT_COOLDOWN_SEC = 2.0` is defined in [config.py](../src/config.py).
 
 ## Why a cooldown
 
@@ -42,7 +42,7 @@ seconds is short enough to feel responsive but long enough to be readable.
   condition holds, instead of firing once on entry and going silent.
   Tracking would let us do entry/exit transitions per person ID.
 - **Not persistent.** Alerts go to stdout only. To save them, redirect:
-  `python detect.py ... | tee alerts.log`.
+  `python src/detect.py ... | tee alerts.log`.
 - **Not external.** No webhooks, no email, no Slack push. Print only.
 
 These are listed in the README's "Limitations" section as honest caveats.

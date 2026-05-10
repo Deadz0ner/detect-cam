@@ -29,11 +29,11 @@ working directory. Subsequent runs are offline.
 ### Choosing a source
 
 ```bash
-python detect.py                              # default webcam (= --source 0)
-python detect.py --source 1                   # second webcam
-python detect.py --source rtsp://192.168...   # IP camera
-python detect.py --source clip.mp4            # video file
-python detect.py --pick-roi                   # webcam + click your own ROI
+python src/detect.py                              # default webcam (= --source 0)
+python src/detect.py --source 1                   # second webcam
+python src/detect.py --source rtsp://192.168...   # IP camera
+python src/detect.py --source clip.mp4            # video file
+python src/detect.py --pick-roi                   # webcam + click your own ROI
 ```
 
 `--source` accepts a digit (webcam index), a file path, or an RTSP/HTTP URL.
@@ -43,16 +43,16 @@ OpenCV figures out which based on the value.
 
 ```bash
 # Click your own ROI on the first frame
-python detect.py --source clip.mp4 --pick-roi
+python src/detect.py --source clip.mp4 --pick-roi
 
 # Save an annotated MP4 for later review
-python detect.py --source clip.mp4 --save out.mp4
+python src/detect.py --source clip.mp4 --save out.mp4
 
 # Tune confidence threshold (default 0.4)
-python detect.py --source clip.mp4 --conf 0.5
+python src/detect.py --source clip.mp4 --conf 0.5
 
 # Headless (no display window — useful over SSH or when only saving)
-python detect.py --source clip.mp4 --save out.mp4 --headless
+python src/detect.py --source clip.mp4 --save out.mp4 --headless
 ```
 
 Press **`q`** in the live window to quit.
@@ -60,8 +60,8 @@ Press **`q`** in the live window to quit.
 ### Picking the ROI check mode
 
 ```bash
-python detect.py --source clip.mp4                  # feet (default)
-python detect.py --source clip.mp4 --check bbox     # any bbox overlap
+python src/detect.py --source clip.mp4                  # feet (default)
+python src/detect.py --source clip.mp4 --check bbox     # any bbox overlap
 ```
 
 `--check` controls **how** a person counts as "in" the ROI:
@@ -98,14 +98,16 @@ When you pass `--pick-roi`, the first frame freezes and you can:
 
 ## Approach
 
-The code is split into small modules so each piece is easy to read on its own:
+The code is split into small modules under `src/` so each piece is easy to
+read on its own:
 
 ```
-detect.py     entry point — argparse + the per-frame loop
-config.py     shared constants (thresholds, colours)
-roi.py        ROI building (default + interactive picker) + helpers
-checks.py     "is this person inside the ROI?" — both modes
-drawing.py    visual overlays painted on each frame
+src/
+├── detect.py     entry point — argparse + the per-frame loop
+├── config.py     shared constants (thresholds, colours)
+├── roi.py        ROI building (default + interactive picker) + helpers
+├── checks.py     "is this person inside the ROI?" — both modes
+└── drawing.py    visual overlays painted on each frame
 ```
 
 The script is one continuous loop ([docs/01-flow.md](docs/01-flow.md)).
