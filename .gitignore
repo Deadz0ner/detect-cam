@@ -1,0 +1,12 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pt
+*.mp4
+*.avi
+*.mov
+.DS_Store
+.idea/
+.vscode/
