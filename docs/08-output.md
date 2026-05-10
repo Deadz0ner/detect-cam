@@ -1,11 +1,10 @@
 # Output
 
 Two output channels for the annotated frame: a live window, and an MP4 on
-disk. They're independent — you can do either, both, or neither.
+disk. They're independent — you can do either, both, or neither. Both live
+in [detect.py](../detect.py) → `main`.
 
 ## Live window
-
-[detect.py:180-183](../detect.py#L180-L183)
 
 ```python
 if not args.headless:
@@ -29,8 +28,6 @@ Skip the window entirely with `--headless`. Useful when:
 
 ## Saved MP4
 
-[detect.py:132-136, 177-178](../detect.py#L132-L136)
-
 ```python
 fourcc = cv2.VideoWriter_fourcc(*"mp4v")
 fps_in = cap.get(cv2.CAP_PROP_FPS) or 25.0
@@ -52,8 +49,6 @@ The output file contains exactly what you'd see on screen, with all the
 overlays baked in. Great for review and for screenshots in the README.
 
 ## Cleanup
-
-[detect.py:191-192](../detect.py#L191-L192)
 
 ```python
 if writer is not None:

@@ -1,7 +1,8 @@
 # Detection check
 
-Given a person box from YOLO, how do we decide if that person is "inside the
-ROI"? Two modes, selected by the `--check` flag.
+Given a person bbox from YOLO, how do we decide if that person is "inside the
+ROI"? Two modes, selected by the `--check` CLI flag. All the code for this
+lives in [checks.py](../checks.py).
 
 ## Mode 1 — `feet` (default)
 
@@ -9,15 +10,15 @@ A single representative point is tested against the polygon.
 
 ### Step 1 — Pick the point
 
-[detect.py:90-92](../detect.py#L90-L92)
+[checks.py](../checks.py) → `feet_point`
 
 ```python
 def feet_point(x1, y1, x2, y2):
     return ((x1 + x2) // 2, y2)
 ```
 
-The bottom-center of the bounding box. Conceptually: where the person's
-feet are touching the floor.
+Bottom-center of the bounding box. Conceptually: where the person's feet
+are touching the floor.
 
 ```
    (x1, y1) ┌─────────┐
@@ -28,9 +29,12 @@ feet are touching the floor.
               (feet)
 ```
 
+Deeper reasoning for why feet rather than centroid or head:
+[09-why-feet-check.md](09-why-feet-check.md).
+
 ### Step 2 — Polygon test
 
-[detect.py:95-96](../detect.py#L95-L96)
+[checks.py](../checks.py) → `is_inside_roi`
 
 ```python
 def is_inside_roi(point, roi):
@@ -38,65 +42,82 @@ def is_inside_roi(point, roi):
 ```
 
 `cv2.pointPolygonTest` returns `+1` inside, `0` on edge, `-1` outside. We
-treat "inside or on edge" as a hit.
+treat "inside or on the edge" as a hit.
 
 ### When `feet` works well
 
 - Surveillance camera that sees the full body
 - ROI defined on the floor plane
-- Person standing upright — see [09-why-feet-check.md](09-why-feet-check.md)
+- Person standing upright
 
 ### When `feet` fails
 
-Close-range scenes where the lower body is cropped off (laptop webcam,
-chest-mounted camera). The bbox bottom is at the chest, not the feet, so
-the chosen point lands in the wrong place — sometimes outside the ROI even
-though the person is clearly "in" it.
+Close-range scenes where the lower body is cropped (laptop webcam, close
+selfie). The bbox bottom sits at the chest, not the feet, so the chosen
+point lands in the wrong place — sometimes outside the ROI even though
+the person is clearly "in" it.
 
 ## Mode 2 — `bbox`
 
-Triggers if **any pixel of the bounding box overlaps the ROI.**
+Triggers if **any pixel of the bounding box overlaps the ROI.** Implemented
+as a two-step check (broad-phase then narrow-phase), which is how every
+collision-detection system works.
 
-### How it works
+### Step 1 — AABB fast reject
 
-[detect.py:99-108](../detect.py#L99-L108)
+[checks.py](../checks.py) → `aabb_overlap`
 
 ```python
-def bbox_overlaps_roi(x1, y1, x2, y2, roi_mask):
-    bx1, by1 = max(x1, 0), max(y1, 0)
-    bx2, by2 = min(x2, w), min(y2, h)
-    if bx1 >= bx2 or by1 >= by2:
-        return False
-    return bool(roi_mask[by1:by2, bx1:bx2].any())
+def aabb_overlap(x1, y1, x2, y2, rx1, ry1, rx2, ry2):
+    return not (x2 < rx1 or x1 > rx2 or y2 < ry1 or y1 > ry2)
 ```
 
-Once at startup we render the ROI polygon into a binary mask the size of
-the frame ([detect.py:139-142](../detect.py#L139-L142)) using
-`cv2.fillPoly`. Then per detection, we slice the mask under the bbox and
-ask "is any pixel set?". This catches every overlap case correctly:
+The textbook axis-aligned rectangle overlap test: two rectangles overlap
+unless one is completely on one side of the other. Four comparisons, O(1).
 
-- bbox corner inside ROI ✓
-- ROI fully inside bbox ✓
-- bbox edge crossing ROI without any vertex inside ✓
+We compare the **bbox** to the **polygon's bounding rectangle** (computed
+once at startup by `build_roi_aabb()` in [roi.py](../roi.py)). If the
+rectangles don't overlap, the bbox can't possibly touch the polygon inside
+the bounding rectangle either — return False immediately.
+
+Full explanation of why this works for any polygon, and what "maybe" means:
+[10-aabb-fastreject.md](10-aabb-fastreject.md).
+
+### Step 2 — Mask check (only if step 1 said "maybe")
+
+[checks.py](../checks.py) → `bbox_overlaps_roi`
+
+```python
+return bool(roi_mask[by1:by2, bx1:bx2].any())
+```
+
+The polygon is rasterised once at startup into a binary mask
+(`build_roi_mask()` in [roi.py](../roi.py)). When step 1 can't rule out
+overlap, we slice the mask under the bbox and ask "is any pixel set?".
+
+For **rectangular ROIs** (the default) this step is skipped entirely —
+the polygon equals its bounding rectangle, so step 1's answer is already
+exact. We pass `roi_mask=None` to signal this.
 
 ### When `bbox` works well
 
-- Webcam at face level (only head/shoulders visible)
-- Crowded scenes with partial occlusion
-- ROIs defined on the *image* rather than the floor
+- Close-range scenes (only head/shoulders visible)
+- Partial occlusion of the lower body
+- ROIs defined on the image plane rather than the floor
 
 ### When `bbox` over-triggers
 
 A person standing well outside the zone whose **arm** or **bag** crosses
-the ROI line will trigger an alert. In production this is usually
-mitigated with a coverage threshold — *"alert if at least 20% of the bbox
-area is inside the ROI"* — instead of plain "any overlap." That's a small
-extension of this approach, not a different one.
+the ROI line will alert. In production this is usually mitigated with a
+coverage threshold — *"alert if at least 20% of the bbox area is inside
+the ROI"* — instead of plain "any overlap." That's a small extension of
+the mask approach, not a different one.
 
 ## Aggregation
 
-Either mode produces a per-detection boolean. The per-frame loop OR's
-those booleans together ([detect.py:145-156](../detect.py#L145-L156)):
+Either mode produces a per-detection boolean. The per-frame loop OR's those
+booleans into a single verdict — *"is at least one person inside the ROI
+right now?"*:
 
 ```python
 person_in_roi = False
@@ -106,8 +127,7 @@ for box in boxes:
         person_in_roi = True
 ```
 
-So one frame produces one verdict — *"is at least one person inside the
-ROI right now?"* — regardless of how many people are visible or which
+One frame, one verdict, regardless of how many people are visible or which
 mode is active.
 
 ## How to switch

@@ -1,8 +1,8 @@
 # Why feet, and not anything else?
 
-A walk-through of the reasoning behind [feet_point](../detect.py#L90-L92).
-Captures the questions asked, the mental model we landed on, and what the
-approach can and can't do.
+A walk-through of the reasoning behind `feet_point` in
+[checks.py](../checks.py). Captures the questions asked, the mental model
+we landed on, and what the approach can and can't do.
 
 ## The question
 
@@ -89,7 +89,7 @@ contact is what defines "where the person is."
 
 ## The polygon test
 
-[detect.py:95-96](../detect.py#L95-L96)
+[checks.py](../checks.py) → `is_inside_roi`
 
 ```python
 def is_inside_roi(point, roi):

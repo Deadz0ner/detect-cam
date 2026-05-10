@@ -51,24 +51,35 @@ python detect.py --source clip.mp4 --save out.mp4
 # Tune confidence threshold (default 0.4)
 python detect.py --source clip.mp4 --conf 0.5
 
-# Switch the ROI test from "feet point" (default) to "any bbox pixel inside ROI"
-python detect.py --source clip.mp4 --check bbox
-
 # Headless (no display window — useful over SSH or when only saving)
 python detect.py --source clip.mp4 --save out.mp4 --headless
 ```
 
-`--check` controls how a person is judged to be "in" the ROI:
+Press **`q`** in the live window to quit.
+
+### Picking the ROI check mode
+
+```bash
+python detect.py --source clip.mp4                  # feet (default)
+python detect.py --source clip.mp4 --check bbox     # any bbox overlap
+```
+
+`--check` controls **how** a person counts as "in" the ROI:
 
 | Mode | Rule | Best for |
 |---|---|---|
-| `feet` (default) | Bottom-center of the bbox must be inside the ROI. | Surveillance-style cameras that see the whole body standing on a floor. |
-| `bbox` | Any pixel of the bbox overlaps the ROI. | Close-range / partial-body scenes (e.g. webcam at face level). |
+| `feet` (default) | Only the bottom-center pixel of the bbox is tested against the polygon. | Surveillance-style cameras that see the whole body standing on a floor. The feet point sits on the floor plane, so the ROI means exactly what you drew. See [docs/09-why-feet-check.md](docs/09-why-feet-check.md). |
+| `bbox` | Any pixel of the bbox that overlaps the ROI counts as "inside." Implemented as a cheap AABB reject followed by a precise mask check — see [docs/10-aabb-fastreject.md](docs/10-aabb-fastreject.md). | Close-range or partial-body scenes — e.g. a laptop webcam at face level — where the feet are off-screen and a feet check would never trigger. |
 
-See [docs/05-detection-check.md](docs/05-detection-check.md) for the full
-comparison and trade-offs.
+The active mode is shown in the **top-left of the live window**
+(`check: feet` / `check: bbox`) so you can confirm at a glance which rule
+is currently being applied.
 
-Press **`q`** in the live window to quit.
+Rule of thumb: leave it on `feet` for ceiling- or wall-mounted cameras
+viewing a room; switch to `bbox` only when the camera can't see the feet.
+`bbox` is more permissive — it can flag someone whose hand or torso
+crosses the line even if they're not standing in the zone — which is
+either the feature you want or a false alarm, depending on the use case.
 
 ### ROI picker controls
 
@@ -86,6 +97,16 @@ When you pass `--pick-roi`, the first frame freezes and you can:
 | Abort | **Esc** |
 
 ## Approach
+
+The code is split into small modules so each piece is easy to read on its own:
+
+```
+detect.py     entry point — argparse + the per-frame loop
+config.py     shared constants (thresholds, colours)
+roi.py        ROI building (default + interactive picker) + helpers
+checks.py     "is this person inside the ROI?" — both modes
+drawing.py    visual overlays painted on each frame
+```
 
 The script is one continuous loop ([docs/01-flow.md](docs/01-flow.md)).
 Each iteration:

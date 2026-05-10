@@ -5,18 +5,20 @@ return value becomes "person inside ROI?".
 
 ## Loading
 
+In [detect.py](../detect.py) → `main`:
+
 ```python
-model = YOLO("yolov8n.pt")   # detect.py:120
+model = YOLO("yolov8n.pt")
 ```
 
-`yolov8n.pt` is a 6 MB pretrained weights file. First run auto-downloads it;
-afterwards it's loaded from disk. Internally, this constructs a PyTorch
-neural network and loads the trained parameters.
+`yolov8n.pt` is a 6 MB pretrained weights file. First run auto-downloads
+it; afterwards it's loaded from disk. Internally, this constructs a
+PyTorch neural network and loads the trained parameters.
 
 ## Calling the model
 
 ```python
-results = model(frame, verbose=False)[0]   # detect.py:143
+results = model(frame, verbose=False)[0]
 ```
 
 ### Input
@@ -24,7 +26,7 @@ results = model(frame, verbose=False)[0]   # detect.py:143
 A single **frame** — a NumPy array of shape `(H, W, 3)`, dtype `uint8`,
 channels in **BGR** order (that's just how OpenCV gives them to us).
 
-That's it. No resizing, no normalization, no tensor conversion needed —
+That's it. No resizing, no normalisation, no tensor conversion needed —
 Ultralytics handles all of that internally before passing the data to PyTorch.
 
 ### Output
@@ -50,27 +52,29 @@ xyxy = [120, 200, 260, 480]    # top-left → bottom-right of the box
 
 ## How we turn output into "alert?"
 
-Per detection ([detect.py:146-156](../detect.py#L146-L156)):
+Per detection, inside [detect.py](../detect.py) → `main`:
 
 ```
-1. cls != 0  OR  conf < threshold        →  skip this box
+1. cls != PERSON_CLASS_ID  OR  conf < args.conf      →  skip this box
 2. read xyxy → cast to ints (x1, y1, x2, y2)
-3. feet_point = ((x1 + x2) // 2, y2)     → bottom-center
-4. inside = cv2.pointPolygonTest(roi, feet_point, False) >= 0
-5. if inside: person_in_roi = True
+3. branch on --check:
+     feet → feet_point(x1,y1,x2,y2) → is_inside_roi(point, roi)
+     bbox → bbox_overlaps_roi(x1,y1,x2,y2, roi_aabb, roi_mask)
+4. if inside: person_in_roi = True
 ```
 
-After the per-box loop finishes, `person_in_roi` is a single boolean for the
-whole frame. That single boolean (plus the cooldown timer) is what gates the
-alert print.
+The two check functions live in [checks.py](../checks.py). After the
+per-box loop finishes, `person_in_roi` is a single boolean for the whole
+frame. That boolean (plus the cooldown timer) is what gates the alert
+print.
 
 ## Why this design
 
 - **One model call per frame, not per person.** YOLO is single-shot: one
   forward pass produces all detections in the frame. Calling it once per
   person would be wasteful and wrong.
-- **No tracking.** We don't link detections across frames. Each frame is a
-  fresh question: "is anyone standing in the ROI right now?"
-- **Bottom-center for the feet.** The bbox center can sit above the ROI
-  while the person is clearly inside it (tall person at the edge of the
-  zone). Using the bottom of the box gets this right.
+- **No tracking.** We don't link detections across frames. Each frame is
+  a fresh question: "is anyone in the ROI right now?"
+- **Pluggable check mode.** Both `feet` and `bbox` operate on the same
+  bbox; only the `inside` computation differs. The model isn't aware which
+  mode is in use.

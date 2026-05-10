@@ -1,11 +1,10 @@
 # Alerting
 
 Print `ALERT: Person in restricted area` when someone is in the ROI —
-without spamming the terminal.
+without spamming the terminal. Lives inline in [detect.py](../detect.py)
+→ `main` because it's just a few lines.
 
 ## The rule
-
-[detect.py:166-170](../detect.py#L166-L170)
 
 ```python
 if person_in_roi and (now - last_alert_at) >= ALERT_COOLDOWN_SEC:
@@ -18,7 +17,7 @@ Two conditions both need to hold:
 1. **Someone is currently in the ROI** (this frame).
 2. **At least 2 seconds have passed** since the last alert printed.
 
-`ALERT_COOLDOWN_SEC = 2.0` is defined at [detect.py:19](../detect.py#L19).
+`ALERT_COOLDOWN_SEC = 2.0` is defined in [config.py](../config.py).
 
 ## Why a cooldown
 

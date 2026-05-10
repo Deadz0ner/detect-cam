@@ -1,11 +1,13 @@
 # Capture
 
-How frames flow in from the outside world.
+How frames flow in from the outside world. All of this lives in
+[detect.py](../detect.py) → `main` — capture is simple enough that it
+didn't justify its own module.
 
 ## The one line that does it all
 
 ```python
-cap = cv2.VideoCapture(source)   # detect.py:121
+cap = cv2.VideoCapture(source)
 ```
 
 OpenCV's `VideoCapture` is overloaded based on what you hand it:
@@ -17,13 +19,12 @@ OpenCV's `VideoCapture` is overloaded based on what you hand it:
 | String URL (`rtsp://...`, `http://...`) | Open the network stream |
 
 `detect.py` accepts any of these via `--source`. If the value is a digit
-string it's converted to an int first ([detect.py:118](../detect.py#L118));
-otherwise it's passed through as a string.
+string it's converted to an int first, otherwise it's passed through.
 
 ## Reading a frame
 
 ```python
-ok, frame = cap.read()   # detect.py:125 (first frame), 185 (loop)
+ok, frame = cap.read()
 ```
 
 - `ok` is `True` while there are still frames; `False` on end-of-file or
@@ -33,15 +34,15 @@ ok, frame = cap.read()   # detect.py:125 (first frame), 185 (loop)
 ## Why we read the first frame *before* the loop
 
 We need a frame on hand at startup so the ROI picker can show it as a still
-image. Once that's done, the same frame is reused as the first iteration's
-input, and `cap.read()` is called at the **end** of each loop iteration to
-get the next one ([detect.py:185](../detect.py#L185)).
+image. Once that's done, the same frame is reused as the loop's first
+iteration's input, and `cap.read()` is called at the **end** of each
+iteration to fetch the next one.
 
 ## Cleanup
 
 ```python
-cap.release()   # detect.py:190
+cap.release()
 ```
 
-This frees the camera handle / closes the file. Forgetting this can leave
-the webcam locked until the process is killed.
+Run after the loop exits. Frees the camera handle / closes the file.
+Forgetting this can leave the webcam locked until the process is killed.
