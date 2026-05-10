@@ -46,13 +46,18 @@ A single `detect.py` runs one frame loop:
 
 1. Grab a frame from the source (webcam or video file).
 2. Run YOLOv8n. Keep "person" detections above confidence 0.4.
-3. For each person, take the bottom-center of the bounding box as their
-   feet position.
-4. The ROI is a hardcoded rectangle covering the middle-bottom of the
-   frame. Check if the feet point sits inside it with four
-   comparisons (`rx1 <= cx <= rx2 and ry1 <= cy <= ry2`).
-5. Draw the box — green if outside the ROI, red if inside — plus the
-   orange ROI outline.
+3. The ROI is a hardcoded rectangle covering the middle-bottom of the
+   frame.
+4. For each person, check whether their bounding box overlaps the ROI
+   rectangle. This is the classic **axis-aligned bounding box (AABB)
+   overlap test** — two rectangles overlap unless one is entirely to
+   the left, right, above, or below the other:
+   ```python
+   inside = not (x2 < rx1 or x1 > rx2 or y2 < ry1 or y1 > ry2)
+   ```
+   Four comparisons, O(1), no OpenCV polygon math required.
+5. Draw the box — green if it doesn't overlap the ROI, red if it does —
+   plus the orange ROI outline.
 6. If anyone is inside the ROI, print the alert. Throttled to once
    every 2 seconds so the terminal stays readable.
 
@@ -66,9 +71,12 @@ A single `detect.py` runs one frame loop:
 - **CPU-only.** Expect ~10–20 FPS on a modern laptop. A GPU speeds it
   up without code changes.
 - **Alerts go to stdout only.** No log file, no webhook, no email.
-- **Feet-point assumes a floor-plane ROI.** For close-range cameras
-  (laptop webcam) the bottom of the bbox sits at the chest, not the
-  feet, so the check can miss someone who is clearly "in" the zone.
+- **Permissive overlap check.** Because we test for any bbox/ROI
+  overlap, a person standing just outside the zone whose outstretched
+  arm or bag crosses the boundary will still trigger an alert.
+  Production systems usually mitigate this with a coverage threshold
+  (e.g. "alert only if at least 20% of the bbox area is inside the
+  zone").
 
 ---
 

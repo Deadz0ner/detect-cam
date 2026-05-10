@@ -67,10 +67,10 @@ def main() -> None:
                 continue
 
             x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
-            # Feet point: bottom-center of the bbox.
-            cx, cy = (x1 + x2) // 2, y2
-            # Inside the rectangular ROI? Four comparisons.
-            inside = rx1 <= cx <= rx2 and ry1 <= cy <= ry2
+            # AABB overlap test: bbox vs ROI rectangle. Four comparisons.
+            # Two axis-aligned rectangles overlap UNLESS one is entirely
+            # to the left, right, above, or below the other.
+            inside = not (x2 < rx1 or x1 > rx2 or y2 < ry1 or y1 > ry2)
             if inside:
                 person_in_roi = True
 
